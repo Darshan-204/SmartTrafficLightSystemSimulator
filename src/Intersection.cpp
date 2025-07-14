@@ -52,8 +52,7 @@ void Intersection::reportEmergencyVehicle(const std::string& laneId, EmergencyVe
                 default: vehicleTypeStr = "UNKNOWN"; break;
             }
             
-            std::cout << "🚨 EMERGENCY: " << vehicleTypeStr << " detected in lane " 
-                     << laneId << " - Activating priority signal!" << std::endl;
+            // Emergency detection logged (visual display handles this)
             break;
         }
     }
@@ -76,7 +75,7 @@ void Intersection::clearEmergencyVehicle(const std::string& laneId) {
             }
             emergencyActive.store(anyEmergencyActive);
             
-            std::cout << "✅ Emergency vehicle cleared from lane " << laneId << std::endl;
+            // Emergency cleared (visual display handles this)
             break;
         }
     }
@@ -151,8 +150,7 @@ void Intersection::handleEmergencyVehicles() {
         default: vehicleTypeStr = "EMERGENCY VEHICLE"; break;
     }
     
-    std::cout << "🚨 PRIORITY: " << vehicleTypeStr << " in lane " 
-             << priorityLane->getId() << " has green light (90 seconds)" << std::endl;
+    // Priority handled (visual display shows this)
 }
 
 void Intersection::optimizeTrafficFlow() {
@@ -184,9 +182,7 @@ void Intersection::optimizeTrafficFlow() {
                         static_cast<int>(30 + (occupancyRatio * 30))); // 30-60 seconds
                     light->setDuration(duration);
                     
-                    std::cout << "Lane " << lane->getId() << " got green light for "
-                             << duration.count() << " seconds (occupancy: "
-                             << occupancyRatio * 100 << "%)" << std::endl;
+                    // Normal traffic flow (visual display shows this)
                 }
             }
         }
