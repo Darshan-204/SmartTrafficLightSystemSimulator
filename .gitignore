@@ -1,0 +1,130 @@
+# Build directories
+build/
+bin/
+lib/
+obj/
+out/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Compiled object files
+*.o
+*.obj
+
+# Executables
+*.exe
+*.out
+*.app
+SmartTrafficLight
+traffic_tests
+
+# Static libraries
+*.a
+*.lib
+
+# Shared libraries
+*.so
+*.so.*
+*.dylib
+*.dll
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Visual Studio Code
+.vscode/
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Visual Studio
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.VC.opendb
+
+# Qt
+*.pro.user
+*.pro.user.*
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.qm
+.qmake.cache
+.qmake.stash
+
+# Temporary files
+*.tmp
+*.temp
+*~
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Core dumps
+core
+core.*
+
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Clang
+.clangd/
+compile_commands.json
+
+# GDB
+.gdb_history
+
+# Valgrind
+*.valgrind
+
+# Coverage files
+*.gcov
+*.gcda
+*.gcno
+
+# Google Test
+gtest/
+googletest/
+_deps/
+
+# Backup files
+*.bak
+*.backup
+
+# Package files
+*.tar.gz
+*.zip
+*.7z
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
