@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <chrono>
 #include <iostream>
+#include <unordered_map>
 
 Intersection::Intersection(const std::string& id)
     : id(id)
@@ -140,7 +141,10 @@ void Intersection::handleEmergencyVehicles() {
     
     // Set priority lane to green with extended duration
     priorityLight->setState(LightState::GREEN);
-    priorityLight->setDuration(std::chrono::seconds(90)); // Extended time for emergency
+    // Ensure minimum green duration of 3 seconds
+    auto emergencyDuration = std::chrono::seconds(90);
+    if (emergencyDuration < std::chrono::seconds(3)) emergencyDuration = std::chrono::seconds(3);
+    priorityLight->setDuration(emergencyDuration); // Extended time for emergency
     
     std::string vehicleTypeStr;
     switch (priorityLane->getEmergencyVehicleType()) {
@@ -156,33 +160,83 @@ void Intersection::handleEmergencyVehicles() {
 void Intersection::optimizeTrafficFlow() {
     std::lock_guard<std::mutex> lock(mutex);
     
-    // Find the lane with highest occupancy
-    auto maxOccupancyLane = std::max_element(lanes.begin(), lanes.end(),
-        [](const auto& a, const auto& b) {
-            return a.first->getOccupancyRatio() < b.first->getOccupancyRatio();
-        });
-    
-    // Update traffic light states based on occupancy
-    for (auto& [lane, light] : lanes) {
-        if (lane == maxOccupancyLane->first) {
-            if (light->getState() != LightState::GREEN) {
-                // First set other lights to red
-                for (auto& [_, otherLight] : lanes) {
-                    if (otherLight != light && !otherLight->isInEmergencyMode()) {
-                        otherLight->setState(LightState::RED);
+    // Check if all lanes have occupancy above 80%
+    bool allAbove80 = true;
+    for (const auto& [lane, light] : lanes) {
+        if (lane->getOccupancyRatio() < 0.8) {
+            allAbove80 = false;
+            break;
+        }
+    }
+
+    auto now = std::chrono::steady_clock::now();
+    // Initialize missing lanes in lastGreenTime
+    for (const auto& [lane, light] : lanes) {
+        if (lastGreenTime.find(lane.get()) == lastGreenTime.end()) {
+            lastGreenTime[lane.get()] = now;
+        }
+    }
+
+    // Enforce minimum green duration of 4 seconds for all lanes
+    for (const auto& [lane, light] : lanes) {
+        if (light->getState() == LightState::GREEN) {
+            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - lastGreenTime[lane.get()]);
+            if (elapsed.count() < 4) {
+                // Skip changing this lane's light if green duration < 4 sec
+                return;
+            }
+        }
+    }
+
+    if (allAbove80) {
+        // Find the lane not given green for the longest time
+        auto oldestLaneIt = std::min_element(lanes.begin(), lanes.end(),
+            [&](const auto& a, const auto& b) {
+                return lastGreenTime[a.first.get()] < lastGreenTime[b.first.get()];
+            });
+        auto laneToGreen = oldestLaneIt->first;
+        auto lightToGreen = oldestLaneIt->second;
+        // Set all other lights to red
+        for (auto& [_, otherLight] : lanes) {
+            if (otherLight != lightToGreen && !otherLight->isInEmergencyMode()) {
+                otherLight->setState(LightState::RED);
+            }
+        }
+        // Set selected lane to green
+        if (!lightToGreen->isInEmergencyMode()) {
+            lightToGreen->setState(LightState::GREEN);
+            lastGreenTime[laneToGreen.get()] = now;
+            // Adjust duration based on occupancy
+            auto occupancyRatio = laneToGreen->getOccupancyRatio();
+            auto duration = std::chrono::seconds(
+                static_cast<int>(30 + (occupancyRatio * 30))); // 30-60 seconds
+            if (duration < std::chrono::seconds(4)) duration = std::chrono::seconds(4);
+            lightToGreen->setDuration(duration);
+        }
+    } else {
+        // Find the lane with highest occupancy
+        auto maxOccupancyLane = std::max_element(lanes.begin(), lanes.end(),
+            [](const auto& a, const auto& b) {
+                return a.first->getOccupancyRatio() < b.first->getOccupancyRatio();
+            });
+        // Update traffic light states based on occupancy
+        for (auto& [lane, light] : lanes) {
+            if (lane == maxOccupancyLane->first) {
+                if (light->getState() != LightState::GREEN) {
+                    for (auto& [_, otherLight] : lanes) {
+                        if (otherLight != light && !otherLight->isInEmergencyMode()) {
+                            otherLight->setState(LightState::RED);
+                        }
                     }
-                }
-                // Then set this light to green
-                if (!light->isInEmergencyMode()) {
-                    light->setState(LightState::GREEN);
-                    
-                    // Adjust duration based on occupancy
-                    auto occupancyRatio = lane->getOccupancyRatio();
-                    auto duration = std::chrono::seconds(
-                        static_cast<int>(30 + (occupancyRatio * 30))); // 30-60 seconds
-                    light->setDuration(duration);
-                    
-                    // Normal traffic flow (visual display shows this)
+                    if (!light->isInEmergencyMode()) {
+                        light->setState(LightState::GREEN);
+                        lastGreenTime[lane.get()] = now;
+                        auto occupancyRatio = lane->getOccupancyRatio();
+                        auto duration = std::chrono::seconds(
+                            static_cast<int>(30 + (occupancyRatio * 30))); // 30-60 seconds
+                        if (duration < std::chrono::seconds(4)) duration = std::chrono::seconds(4);
+                        light->setDuration(duration);
+                    }
                 }
             }
         }

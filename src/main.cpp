@@ -135,7 +135,7 @@ private:
     }
 };
 
-void simulateTraffic(std::shared_ptr<Lane> lane) {
+void simulateTraffic(std::shared_ptr<Lane> lane, std::shared_ptr<TrafficLight> light) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dis(0.0, 1.0);
@@ -145,9 +145,12 @@ void simulateTraffic(std::shared_ptr<Lane> lane) {
         if (dis(gen) < 0.7) { // 70% chance to add a vehicle
             lane->addVehicle();
         } else {
-            lane->removeVehicle();
+            // Only remove vehicle if the light is not red
+            if (light && light->getState() != LightState::RED) {
+                lane->removeVehicle();
+            }
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }
 
@@ -224,10 +227,10 @@ int main() {
 
     // Start traffic simulation threads
     std::vector<std::thread> simulationThreads;
-    simulationThreads.emplace_back(simulateTraffic, northLane);
-    simulationThreads.emplace_back(simulateTraffic, southLane);
-    simulationThreads.emplace_back(simulateTraffic, eastLane);
-    simulationThreads.emplace_back(simulateTraffic, westLane);
+    simulationThreads.emplace_back(simulateTraffic, northLane, northLight);
+    simulationThreads.emplace_back(simulateTraffic, southLane, southLight);
+    simulationThreads.emplace_back(simulateTraffic, eastLane, eastLight);
+    simulationThreads.emplace_back(simulateTraffic, westLane, westLight);
     
     // Start emergency vehicle simulation thread
     simulationThreads.emplace_back(simulateEmergencyVehicles, intersection, allLanes);
