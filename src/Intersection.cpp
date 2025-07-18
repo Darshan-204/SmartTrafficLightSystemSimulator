@@ -143,7 +143,7 @@ void Intersection::handleEmergencyVehicles() {
     priorityLight->setState(LightState::GREEN);
     // Ensure minimum green duration of 3 seconds
     auto emergencyDuration = std::chrono::seconds(90);
-    if (emergencyDuration < std::chrono::seconds(3)) emergencyDuration = std::chrono::seconds(3);
+    if (emergencyDuration < std::chrono::seconds(4)) emergencyDuration = std::chrono::seconds(4);
     priorityLight->setDuration(emergencyDuration); // Extended time for emergency
     
     std::string vehicleTypeStr;
@@ -170,7 +170,7 @@ void Intersection::optimizeTrafficFlow() {
     }
 
     auto now = std::chrono::steady_clock::now();
-    // Initialize missing lanes in lastGreenTime
+    // Initialize missing lanes in lastGreenTime /  tracks when each lane last got a green light.
     for (const auto& [lane, light] : lanes) {
         if (lastGreenTime.find(lane.get()) == lastGreenTime.end()) {
             lastGreenTime[lane.get()] = now;
@@ -181,7 +181,7 @@ void Intersection::optimizeTrafficFlow() {
     for (const auto& [lane, light] : lanes) {
         if (light->getState() == LightState::GREEN) {
             auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - lastGreenTime[lane.get()]);
-            if (elapsed.count() < 4) {
+            if (elapsed.count() < 5) {
                 // Skip changing this lane's light if green duration < 4 sec
                 return;
             }

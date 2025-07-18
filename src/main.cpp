@@ -150,7 +150,7 @@ void simulateTraffic(std::shared_ptr<Lane> lane, std::shared_ptr<TrafficLight> l
                 lane->removeVehicle();
             }
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
     }
 }
 
