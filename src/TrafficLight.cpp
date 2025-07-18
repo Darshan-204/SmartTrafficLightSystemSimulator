@@ -2,7 +2,7 @@
 
 TrafficLight::TrafficLight(const std::string& id)
     : id(id)
-    , currentState(LightState::OFF)
+    , currentState(LightState::RED)
     , stateDuration(std::chrono::seconds(30))
     , emergencyMode(false)
     , emergencyVehicleType(EmergencyVehicleType::NONE)

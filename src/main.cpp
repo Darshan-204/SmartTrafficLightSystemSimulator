@@ -1,3 +1,7 @@
+#include <atomic>
+#include <mutex>
+std::atomic<bool> pedestrianCrossingActive{false};
+std::mutex pedestrianMutex;
 #include <iostream>
 #include <random>
 #include <chrono>
@@ -31,23 +35,25 @@ public:
         std::cout << COLOR_BOLD COLOR_CYAN "🚦 Smart Traffic Light System - Live View 🚦" COLOR_RESET << std::endl;
         std::cout << "=============================================" << std::endl << std::endl;
 
-        // For each lane, print two lines: lights, then lane info
+        // Pedestrian crossing event: all lights red, show 🚶, but not emergency
+        bool crossing = pedestrianCrossingActive.load();
+
         for (size_t i = 0; i < lanes.size(); ++i) {
             auto lane = lanes[i];
             auto light = lights[i];
             LightState lightState = light->getState();
             bool hasEmergency = lane->hasEmergencyVehicle();
-            // First line: lights (add 🚨 if emergency)
-            std::string redLight   = (lightState == LightState::RED)    ? (COLOR_RED   "🔴" COLOR_RESET)   : (COLOR_WHITE "⚪" COLOR_RESET);
-            std::string yellowLight= (lightState == LightState::YELLOW) ? (COLOR_YELLOW"🟡" COLOR_RESET)   : (COLOR_WHITE "⚪" COLOR_RESET);
-            std::string greenLight = (lightState == LightState::GREEN)  ? (COLOR_GREEN "🟢" COLOR_RESET)   : (COLOR_WHITE "⚪" COLOR_RESET);
+            std::string redLight   = (crossing || lightState == LightState::RED)    ? (COLOR_RED   "🔴" COLOR_RESET)   : (COLOR_WHITE "⚪" COLOR_RESET);
+            std::string yellowLight= (crossing) ? (COLOR_WHITE "⚪" COLOR_RESET) : ((lightState == LightState::YELLOW) ? (COLOR_YELLOW"🟡" COLOR_RESET)   : (COLOR_WHITE "⚪" COLOR_RESET));
+            std::string greenLight = (crossing) ? (COLOR_WHITE "⚪" COLOR_RESET) : ((lightState == LightState::GREEN)  ? (COLOR_GREEN "🟢" COLOR_RESET)   : (COLOR_WHITE "⚪" COLOR_RESET));
             std::cout << redLight << " " << yellowLight << " " << greenLight;
-            if (hasEmergency) {
+            if (crossing) {
+                std::cout << " " << COLOR_YELLOW << COLOR_BOLD << "�" << COLOR_RESET;
+            } else if (hasEmergency) {
                 std::cout << " " << COLOR_RED << COLOR_BOLD << "🚨" << COLOR_RESET;
             }
             std::cout << std::endl;
 
-            // Second line: lane name, car occupancy, percentage
             std::string laneId = lane->getId();
             std::string arrow;
             if (laneId == "North") arrow = "↑ ";
@@ -61,7 +67,9 @@ public:
             std::cout << "[";
             for (int j = 0; j < capacity; ++j) {
                 if (j < vehicleCount) {
-                    if (hasEmergency && j == vehicleCount - 1) {
+                    if (crossing && j == vehicleCount - 1) {
+                        std::cout << COLOR_YELLOW "🚶" COLOR_RESET;
+                    } else if (hasEmergency && j == vehicleCount - 1) {
                         switch (lane->getEmergencyVehicleType()) {
                             case EmergencyVehicleType::POLICE:
                                 std::cout << COLOR_BLUE "🚓" COLOR_RESET;
@@ -93,7 +101,9 @@ public:
                 std::cout << COLOR_GREEN;
             }
             std::cout << std::fixed << std::setprecision(0) << occupancy << "%" COLOR_RESET;
-            if (hasEmergency) {
+            if (crossing) {
+                std::cout << " " COLOR_YELLOW COLOR_BOLD "(PEDESTRIAN)" COLOR_RESET;
+            } else if (hasEmergency) {
                 std::string emergencyType;
                 switch (lane->getEmergencyVehicleType()) {
                     case EmergencyVehicleType::POLICE: emergencyType = "POLICE"; break;
@@ -107,6 +117,7 @@ public:
         }
         std::cout << std::endl;
         std::cout << "Legend: 🚗=Vehicle 🚨=Emergency "
+                  << COLOR_YELLOW "🚶" COLOR_RESET << "=Pedestrian "
                   << COLOR_RED   "🔴" COLOR_RESET << "=Red "
                   << COLOR_GREEN "🟢" COLOR_RESET << "=Green "
                   << COLOR_YELLOW"🟡" COLOR_RESET << "=Yellow" << std::endl;
@@ -302,6 +313,26 @@ int main() {
     // Start emergency vehicle simulation thread
     simulationThreads.emplace_back(simulateEmergencyVehicles, intersection, allLanes);
     
+    // Start pedestrian crossing simulation thread
+    simulationThreads.emplace_back([]() {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<> waitTime(20, 40);
+        std::uniform_int_distribution<> crossDuration(5, 10);
+        while (true) {
+            std::this_thread::sleep_for(std::chrono::seconds(waitTime(gen)));
+            {
+                std::lock_guard<std::mutex> lock(pedestrianMutex);
+                pedestrianCrossingActive = true;
+            }
+            std::this_thread::sleep_for(std::chrono::seconds(crossDuration(gen)));
+            {
+                std::lock_guard<std::mutex> lock(pedestrianMutex);
+                pedestrianCrossingActive = false;
+            }
+        }
+    });
+
     // Start display thread
     simulationThreads.emplace_back(displayLoop, allLanes, allLights);
 
