@@ -27,18 +27,89 @@ public:
     static void displayIntersection(const std::vector<std::shared_ptr<Lane>>& lanes,
                                   const std::vector<std::shared_ptr<TrafficLight>>& lights) {
         clearScreen();
-        
+
         std::cout << COLOR_BOLD COLOR_CYAN "🚦 Smart Traffic Light System - Live View 🚦" COLOR_RESET << std::endl;
         std::cout << "=============================================" << std::endl << std::endl;
-        
-        // Display each lane
+
+        // For each lane, print two lines: lights, then lane info
         for (size_t i = 0; i < lanes.size(); ++i) {
-            displayLane(lanes[i], lights[i]);
+            auto lane = lanes[i];
+            auto light = lights[i];
+            LightState lightState = light->getState();
+            bool hasEmergency = lane->hasEmergencyVehicle();
+            // First line: lights (add 🚨 if emergency)
+            std::string redLight   = (lightState == LightState::RED)    ? (COLOR_RED   "🔴" COLOR_RESET)   : (COLOR_WHITE "⚪" COLOR_RESET);
+            std::string yellowLight= (lightState == LightState::YELLOW) ? (COLOR_YELLOW"🟡" COLOR_RESET)   : (COLOR_WHITE "⚪" COLOR_RESET);
+            std::string greenLight = (lightState == LightState::GREEN)  ? (COLOR_GREEN "🟢" COLOR_RESET)   : (COLOR_WHITE "⚪" COLOR_RESET);
+            std::cout << redLight << " " << yellowLight << " " << greenLight;
+            if (hasEmergency) {
+                std::cout << " " << COLOR_RED << COLOR_BOLD << "🚨" << COLOR_RESET;
+            }
+            std::cout << std::endl;
+
+            // Second line: lane name, car occupancy, percentage
+            std::string laneId = lane->getId();
+            std::string arrow;
+            if (laneId == "North") arrow = "↑ ";
+            else if (laneId == "South") arrow = "↓ ";
+            else if (laneId == "East") arrow = "→ ";
+            else if (laneId == "West") arrow = "← ";
+            std::cout << COLOR_BOLD << arrow << laneId << " Lane " << COLOR_RESET;
+
+            int vehicleCount = lane->getVehicleCount();
+            int capacity = lane->getCapacity();
+            std::cout << "[";
+            for (int j = 0; j < capacity; ++j) {
+                if (j < vehicleCount) {
+                    if (hasEmergency && j == vehicleCount - 1) {
+                        switch (lane->getEmergencyVehicleType()) {
+                            case EmergencyVehicleType::POLICE:
+                                std::cout << COLOR_BLUE "🚓" COLOR_RESET;
+                                break;
+                            case EmergencyVehicleType::AMBULANCE:
+                                std::cout << COLOR_WHITE "🚑" COLOR_RESET;
+                                break;
+                            case EmergencyVehicleType::FIRE_TRUCK:
+                                std::cout << COLOR_RED "🚒" COLOR_RESET;
+                                break;
+                            default:
+                                std::cout << "🚗";
+                                break;
+                        }
+                    } else {
+                        std::cout << "🚗";
+                    }
+                } else {
+                    std::cout << "  ";
+                }
+            }
+            std::cout << "] ";
+            double occupancy = lane->getOccupancyRatio() * 100;
+            if (occupancy >= 80) {
+                std::cout << COLOR_RED;
+            } else if (occupancy >= 50) {
+                std::cout << COLOR_YELLOW;
+            } else {
+                std::cout << COLOR_GREEN;
+            }
+            std::cout << std::fixed << std::setprecision(0) << occupancy << "%" COLOR_RESET;
+            if (hasEmergency) {
+                std::string emergencyType;
+                switch (lane->getEmergencyVehicleType()) {
+                    case EmergencyVehicleType::POLICE: emergencyType = "POLICE"; break;
+                    case EmergencyVehicleType::AMBULANCE: emergencyType = "AMBULANCE"; break;
+                    case EmergencyVehicleType::FIRE_TRUCK: emergencyType = "FIRE TRUCK"; break;
+                    default: emergencyType = "EMERGENCY"; break;
+                }
+                std::cout << " " COLOR_RED COLOR_BOLD "(" << emergencyType << ")" COLOR_RESET;
+            }
             std::cout << std::endl;
         }
-        
         std::cout << std::endl;
-        std::cout << "Legend: 🚗=Vehicle 🚨=Emergency 🔴=Red 🟢=Green 🟡=Yellow" << std::endl;
+        std::cout << "Legend: 🚗=Vehicle 🚨=Emergency "
+                  << COLOR_RED   "🔴" COLOR_RESET << "=Red "
+                  << COLOR_GREEN "🟢" COLOR_RESET << "=Green "
+                  << COLOR_YELLOW"🟡" COLOR_RESET << "=Yellow" << std::endl;
         std::cout << "Press Enter to stop..." << std::endl;
     }
     
@@ -49,43 +120,40 @@ private:
         int capacity = lane->getCapacity();
         bool hasEmergency = lane->hasEmergencyVehicle();
         LightState lightState = light->getState();
-        
-        // Lane header with traffic light
+
+        // Prepare traffic light display: always show 3 lights (red, yellow, green)
+        std::string redLight   = (lightState == LightState::RED)    ? (COLOR_RED   "🔴" COLOR_RESET)   : (COLOR_WHITE "⚪" COLOR_RESET);
+        std::string yellowLight= (lightState == LightState::YELLOW) ? (COLOR_YELLOW"🟡" COLOR_RESET)   : (COLOR_WHITE "⚪" COLOR_RESET);
+        std::string greenLight = (lightState == LightState::GREEN)  ? (COLOR_GREEN "🟢" COLOR_RESET)   : (COLOR_WHITE "⚪" COLOR_RESET);
+
+        // Lane header (arrow + name)
         std::cout << COLOR_BOLD;
         if (laneId == "North") std::cout << "   ↑ ";
         else if (laneId == "South") std::cout << "   ↓ ";
         else if (laneId == "East") std::cout << "   → ";
         else if (laneId == "West") std::cout << "   ← ";
-        
         std::cout << laneId << " Lane " COLOR_RESET;
-        
-        // Traffic light display
-        switch (lightState) {
-            case LightState::RED:
-                std::cout << COLOR_RED "🔴" COLOR_RESET;
-                break;
-            case LightState::YELLOW:
-                std::cout << COLOR_YELLOW "🟡" COLOR_RESET;
-                break;
-            case LightState::GREEN:
-                std::cout << COLOR_GREEN "🟢" COLOR_RESET;
-                break;
-        }
-        
+
+        // First line: red light
+        std::cout << redLight;
         if (light->isInEmergencyMode()) {
             std::cout << " " COLOR_RED COLOR_BOLD "🚨 EMERGENCY" COLOR_RESET;
         }
-        
         std::cout << std::endl;
-        
-        // Lane visualization
+
+        // Second line: align with lane label, yellow light
+        std::cout << std::string(laneId.length() + 11, ' '); // align under lane label and arrow
+        std::cout << yellowLight << std::endl;
+
+        // Third line: align with lane label, green light
+        std::cout << std::string(laneId.length() + 11, ' ');
+        std::cout << greenLight;
+
+        // Lane visualization (on same line as green light)
         std::cout << "   [";
-        
-        // Show vehicles in the lane
         for (int i = 0; i < capacity; ++i) {
             if (i < vehicleCount) {
                 if (hasEmergency && i == vehicleCount - 1) {
-                    // Show emergency vehicle
                     switch (lane->getEmergencyVehicleType()) {
                         case EmergencyVehicleType::POLICE:
                             std::cout << COLOR_BLUE "🚓" COLOR_RESET;
@@ -107,9 +175,8 @@ private:
                 std::cout << "  ";
             }
         }
-        
         std::cout << "] ";
-        
+
         // Display occupancy percentage
         double occupancy = lane->getOccupancyRatio() * 100;
         if (occupancy >= 80) {
@@ -119,9 +186,8 @@ private:
         } else {
             std::cout << COLOR_GREEN;
         }
-        
         std::cout << std::fixed << std::setprecision(0) << occupancy << "%" COLOR_RESET;
-        
+
         if (hasEmergency) {
             std::string emergencyType;
             switch (lane->getEmergencyVehicleType()) {
@@ -132,6 +198,7 @@ private:
             }
             std::cout << " " COLOR_RED COLOR_BOLD "(" << emergencyType << ")" COLOR_RESET;
         }
+        std::cout << std::endl;
     }
 };
 

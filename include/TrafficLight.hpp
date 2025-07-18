@@ -6,6 +6,7 @@
 #include <string>
 
 enum class LightState {
+    OFF,
     RED,
     YELLOW,
     GREEN

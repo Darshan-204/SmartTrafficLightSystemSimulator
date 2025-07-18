@@ -138,10 +138,14 @@ void Intersection::handleEmergencyVehicles() {
             light->setState(LightState::RED);
         }
     }
-    
-    // Set priority lane to green with extended duration
-    priorityLight->setState(LightState::GREEN);
-    // Ensure minimum green duration of 3 seconds
+
+    // Transition priority lane: RED -> YELLOW -> GREEN
+    if (priorityLight->getState() != LightState::GREEN) {
+        priorityLight->setState(LightState::YELLOW);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        priorityLight->setState(LightState::GREEN);
+    }
+    // Ensure minimum green duration of 4 seconds
     auto emergencyDuration = std::chrono::seconds(90);
     if (emergencyDuration < std::chrono::seconds(4)) emergencyDuration = std::chrono::seconds(4);
     priorityLight->setDuration(emergencyDuration); // Extended time for emergency
@@ -202,9 +206,13 @@ void Intersection::optimizeTrafficFlow() {
                 otherLight->setState(LightState::RED);
             }
         }
-        // Set selected lane to green
+        // Set selected lane to green, with YELLOW transition
         if (!lightToGreen->isInEmergencyMode()) {
-            lightToGreen->setState(LightState::GREEN);
+            if (lightToGreen->getState() != LightState::GREEN) {
+                lightToGreen->setState(LightState::YELLOW);
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                lightToGreen->setState(LightState::GREEN);
+            }
             lastGreenTime[laneToGreen.get()] = now;
             // Adjust duration based on occupancy
             auto occupancyRatio = laneToGreen->getOccupancyRatio();
@@ -229,6 +237,8 @@ void Intersection::optimizeTrafficFlow() {
                         }
                     }
                     if (!light->isInEmergencyMode()) {
+                        light->setState(LightState::YELLOW);
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
                         light->setState(LightState::GREEN);
                         lastGreenTime[lane.get()] = now;
                         auto occupancyRatio = lane->getOccupancyRatio();
