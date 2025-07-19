@@ -133,8 +133,8 @@ This project is for educational purposes, demonstrating C++ concepts including:
 - Real-time system simulation
 
   ## Team :
-  -Darshan M P
-  -Ganesh Patil
-  -Santosh
-  -Sujith
-  -Sarvesh
+  - Darshan M P
+  - Ganesh Patil
+  - Santosh
+  - Sujith
+  - Sarvesh
