@@ -131,3 +131,10 @@ This project is for educational purposes, demonstrating C++ concepts including:
 - Object-oriented design patterns
 - State machine implementation
 - Real-time system simulation
+
+  ## Team :
+  -Darshan M P
+  -Ganesh Patil
+  -Santosh
+  -Sujith
+  -Sarvesh
